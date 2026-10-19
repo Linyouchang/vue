@@ -1,13 +1,39 @@
 <script setup>
+import { ref, computed } from 'vue'
+import ProjectCard from './ProjectCard.vue'
+
 const isOpen = defineModel('open', { type: Boolean, default: true })
 
-defineProps({
+const props = defineProps({
   data: {
     type: Object,
     required: true
   }
 })
 
+// 搜尋關鍵字狀態
+const keyword = ref('')
+
+// 依關鍵字篩選作品清單（比對名稱、說明或網址）
+const filteredProjects = computed(() => {
+  const query = keyword.value.trim().toLowerCase()
+  const items = props.data.items || []
+  if (!query) return items
+
+  return items.filter(item => {
+    const matchTitle = item.title?.toLowerCase().includes(query)
+    const matchDesc = item.desc?.toLowerCase().includes(query)
+    const matchUrl = item.url?.toLowerCase().includes(query)
+    return Boolean(matchTitle || matchDesc || matchUrl)
+  })
+})
+
+// 清空搜尋條件
+function clearSearch() {
+  keyword.value = ''
+}
+
+// 切換收起/展開
 function toggle() {
   isOpen.value = !isOpen.value
 }
@@ -15,6 +41,7 @@ function toggle() {
 
 <template>
   <section class="section projects-section" aria-labelledby="projects-heading">
+    <!-- 區塊標題與收合按鈕 -->
     <div
       class="section-header"
       :class="{ 'is-collapsed': !isOpen }"
@@ -39,54 +66,51 @@ function toggle() {
       </button>
     </div>
 
+    <!-- 內容折疊容器 -->
     <div class="collapse-wrapper" :class="{ 'is-open': isOpen }">
       <div class="collapse-inner">
         <div class="section-content">
-          <div class="projects-grid">
-            <article
-              v-for="project in data.items"
-              :key="project.id"
-              class="card project-card"
-            >
-              <a
-                :href="project.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="project-img-link"
-                :aria-label="project.ariaLabel"
+          <!-- 搜尋與結果數量列 -->
+          <div class="projects-controls">
+            <div class="search-box">
+              <input
+                v-model="keyword"
+                type="search"
+                class="search-input"
+                placeholder="搜尋作品名稱或關鍵字..."
+                aria-label="搜尋作品"
+              />
+              <button
+                v-if="keyword"
+                type="button"
+                class="clear-btn"
+                @click="clearSearch"
+                aria-label="清空搜尋"
+                title="清空搜尋"
               >
-                <div class="project-media">
-                  <img
-                    :src="project.imgSrc"
-                    :alt="project.alt"
-                    class="project-img"
-                    loading="lazy"
-                  />
-                </div>
-              </a>
-              <div class="project-info">
-                <h3 class="card-title">
-                  <a
-                    :href="project.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="project-title-link"
-                  >
-                    {{ project.title }}
-                  </a>
-                </h3>
-                <p class="card-desc">
-                  <a
-                    :href="project.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="project-link"
-                  >
-                    {{ project.url }}
-                  </a>
-                </p>
-              </div>
-            </article>
+                ✕
+              </button>
+            </div>
+            <span class="result-count">
+              共 {{ filteredProjects.length }} 件作品
+            </span>
+          </div>
+
+          <!-- 無符合搜尋結果提示 -->
+          <div v-if="filteredProjects.length === 0" class="no-result">
+            <p class="no-result-text">查無符合「{{ keyword }}」的作品</p>
+            <button type="button" class="reset-search-btn" @click="clearSearch">
+              清空搜尋條件
+            </button>
+          </div>
+
+          <!-- 作品卡片清單網格 -->
+          <div v-else class="projects-grid">
+            <ProjectCard
+              v-for="project in filteredProjects"
+              :key="project.id"
+              :project="project"
+            />
           </div>
         </div>
       </div>
@@ -99,116 +123,109 @@ function toggle() {
   padding-top: 2px;
 }
 
+/* 搜尋列與計數樣式 */
+.projects-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 220px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 7px 32px 7px 12px;
+  font-size: 0.88rem;
+  font-family: var(--font-family-base);
+  background: #fffdf9;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-main);
+  transition: var(--transition-smooth);
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(18, 51, 92, 0.12);
+}
+
+.clear-btn {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  transition: var(--transition-smooth);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-btn:hover {
+  color: var(--color-accent);
+  background-color: rgba(192, 54, 34, 0.1);
+}
+
+.result-count {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* 查無結果提示 */
+.no-result {
+  text-align: center;
+  padding: 32px 16px;
+  background: rgba(244, 238, 226, 0.5);
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+}
+
+.no-result-text {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+.reset-search-btn {
+  background: var(--color-primary);
+  color: #fffaf0;
+  border: 1px solid var(--color-primary);
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition-smooth);
+}
+
+.reset-search-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+  box-shadow: 0 2px 8px rgba(18, 51, 92, 0.2);
+}
+
+/* 作品列表網格排列 (保留在父層) */
 .projects-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-}
-
-.project-card {
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  background: linear-gradient(180deg, #fdfbf7 0%, #f5efe3 100%);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--color-primary);
-  border-radius: 4px;
-  transition: var(--transition-smooth);
-}
-
-.project-card:hover {
-  border-color: var(--color-gold);
-  border-left-color: var(--color-accent);
-  box-shadow: 
-    0 8px 20px rgba(10, 27, 51, 0.14),
-    0 0 0 1px rgba(197, 147, 54, 0.2);
-  transform: translateY(-2px);
-}
-
-.project-img-link {
-  display: block;
-  overflow: hidden;
-  border-radius: 3px;
-  border: 2px solid var(--color-primary-light);
-  margin-bottom: 12px;
-  background-color: var(--color-primary-dark);
-  text-decoration: none;
-  box-shadow: 0 3px 8px rgba(10, 27, 51, 0.15);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.project-img-link:hover {
-  border-color: var(--color-accent);
-  box-shadow: 0 4px 12px rgba(192, 54, 34, 0.25);
-}
-
-.project-media {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-}
-
-.project-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.4s ease;
-}
-
-.project-card:hover .project-img {
-  transform: scale(1.04);
-}
-
-.project-info {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-.card-title {
-  font-family: var(--font-family-serif);
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-  margin-bottom: 8px;
-  line-height: 1.4;
-}
-
-.project-title-link {
-  color: var(--color-primary-dark);
-  text-decoration: none;
-  font-family: var(--font-family-serif);
-  font-weight: 700;
-  transition: var(--transition-smooth);
-}
-
-.project-title-link:hover {
-  color: var(--color-accent);
-}
-
-.card-desc {
-  font-size: 0.92rem;
-  color: var(--color-text-muted);
-  line-height: 1.75;
-  margin-bottom: 0;
-  overflow-wrap: break-word;
-  word-break: break-all;
-}
-
-.project-link {
-  color: var(--color-primary);
-  text-decoration: underline;
-  text-underline-offset: 3.5px;
-  text-decoration-color: var(--color-gold);
-  transition: var(--transition-smooth);
-  word-break: break-all;
-  font-size: 0.9rem;
-}
-
-.project-link:hover {
-  color: var(--color-accent);
-  text-decoration-color: var(--color-accent);
 }
 
 @media (max-width: 600px) {
@@ -217,8 +234,13 @@ function toggle() {
     gap: 12px;
   }
 
-  .project-card {
-    padding: 14px;
+  .projects-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    min-width: 100%;
   }
 }
 </style>

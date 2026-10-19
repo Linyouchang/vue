@@ -84,6 +84,7 @@ export const profileData = {
       {
         id: 'teacher-training',
         title: '師培生計畫',
+        desc: '教育部師培生 AI 協作教學培育計畫網站',
         url: 'https://aiteachertraining.vercel.app/',
         imgSrc: teacherTrainingImg,
         alt: '師培生計畫網站預覽',
@@ -92,6 +93,7 @@ export const profileData = {
       {
         id: 'class-practice',
         title: '課堂練習',
+        desc: '個人學習成果展示與課堂作業網站',
         url: 'https://linyouchang.github.io/VScode-LYC/',
         imgSrc: classPracticeImg,
         alt: '課堂練習網站預覽',
@@ -103,4 +105,3 @@ export const profileData = {
     copyright: '© 2026 林祐菖 · AI 協作網站開發課程作業'
   }
 }
-
